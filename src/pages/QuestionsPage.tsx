@@ -214,21 +214,23 @@ export const QuestionsPage = () => {
     railSet({ visible: true, totalQuestions: getRailQuestionCount(nextQuestions.length), doneCount: nextQuestions.length });
   };
 
+  const buildQuestionFromForm = (values: QuestionValues): Question => ({
+    id:
+      editing?.id && editing.id.startsWith("temp-")
+        ? editing.id
+        : `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    text: values.text,
+    options: [values.optionA, values.optionB, values.optionC, values.optionD],
+    correctOption: values.correctOption,
+    explanation: values.explanation,
+    difficulty: values.difficulty as Difficulty,
+    topic: values.topic,
+    subTopic: values.subTopic,
+    mediaUrl: values.mediaUrl || undefined
+  });
+
   const submitQuestion = handleSubmit(async (values) => {
-    const question: Question = {
-      id:
-        editing?.id && editing.id.startsWith("temp-")
-          ? editing.id
-          : `temp-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      text: values.text,
-      options: [values.optionA, values.optionB, values.optionC, values.optionD],
-      correctOption: values.correctOption,
-      explanation: values.explanation,
-      difficulty: values.difficulty as Difficulty,
-      topic: values.topic,
-      subTopic: values.subTopic,
-      mediaUrl: values.mediaUrl || undefined
-    };
+    const question = buildQuestionFromForm(values);
     const nextQuestions = editing
       ? questions.map((item) => (item.id === editing.id ? question : item))
       : [...questions, question];
@@ -316,20 +318,37 @@ export const QuestionsPage = () => {
   };
 
   const continueToPreview = async () => {
-    if (!questions.length) {
+
+    const parsedForm = isDirty ? schema.safeParse(getValues()) : null;
+    if (parsedForm && !parsedForm.success) {
+      await handleSubmit(() => undefined)();
+      return;
+    }
+
+    const currentFormQuestion = parsedForm?.success ? buildQuestionFromForm(parsedForm.data) : null;
+    const finalQuestions = currentFormQuestion
+      ? editing
+        ? questions.map((question) => (question.id === editing.id ? currentFormQuestion : question))
+        : [...questions, currentFormQuestion]
+      : questions;
+
+    console.log("Final Questions", finalQuestions);
+
+    if (!finalQuestions.length) {
       setListError("Add at least 1 question before continuing.");
       toast.error("Add at least 1 question");
       return;
     }
     try {
-      const existingIds = questions.filter((question) => !question.id.startsWith("temp-")).map((question) => question.id);
-      const newQuestions = questions.filter((question) => question.id.startsWith("temp-"));
+      const existingIds = finalQuestions.filter((question) => !question.id.startsWith("temp-")).map((question) => question.id);
+      const newQuestions = finalQuestions.filter((question) => question.id.startsWith("temp-"));
       const subjectId = test.subjectId;
       if (!subjectId) {
         throw new Error("Subject ID is missing for this test. Please re-save test details before adding questions.");
       }
+      const payload = { questions: newQuestions.map((question) => questionToBulkPayload(question, test.id, subjectId)) };
       const createdQuestions = newQuestions.length
-        ? await questionsService.bulkCreate({ questions: newQuestions.map((question) => questionToBulkPayload(question, test.id, subjectId)) })
+        ? await questionsService.bulkCreate(payload)
         : [];
       const questionIds = [...existingIds, ...createdQuestions.map((question) => question.id)];
       await testsService.update(test.id, { questions: questionIds, status: "unpublished" });
