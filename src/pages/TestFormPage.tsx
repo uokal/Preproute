@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { getApiErrorMessage } from "../api/client";
 import { ApiSubject, ApiSubTopic, ApiTopic, toApiDifficulty, toApiType } from "../services/apiTypes";
@@ -10,7 +10,8 @@ import { subjectsService } from "../services/subjects.service";
 import { testsService } from "../services/tests.service";
 import { topicsService } from "../services/topics.service";
 import { Difficulty, Test, TestType } from "../types";
-import { Button, Card, EmptyState, FormError, Input, Loader, MultiSelect, Select, SpinnerInput } from "../ui/components";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { Button, Card, EmptyState, FormError, FormSkeleton, Input, Select, SpinnerInput } from "../ui/components";
 import { useRailStore } from "../store/railStore";
 
 const testTypes: TestType[] = ["Chapterwise", "PYQ", "Mock Test"];
@@ -57,6 +58,7 @@ export const TestFormPage = () => {
   const [subTopics, setSubTopics] = useState<ApiSubTopic[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(testId));
   const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const railSet = useRailStore((s) => s.set);
   const railClear = useRailStore((s) => s.clear);
   const isHydratingEdit = useRef(false);
@@ -66,12 +68,13 @@ export const TestFormPage = () => {
     handleSubmit,
     reset,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
     watch
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: toValues(existing) });
   const selectedType = watch("type");
   const selectedSubject = watch("subject");
   const selectedTopics = watch("topics");
+  useUnsavedChanges(isDirty && !isSubmitting);
 
   useEffect(() => {
     const load = async () => {
@@ -129,7 +132,7 @@ export const TestFormPage = () => {
     };
     void load();
     return () => { railClear(); };
-  }, [reset, testId]);
+  }, [railClear, railSet, reloadKey, reset, testId]);
 
   useEffect(() => {
     if (!selectedSubject) {
@@ -198,6 +201,7 @@ export const TestFormPage = () => {
   const saveDraft = handleSubmit(async (values) => {
     try {
       await persist(values, "draft");
+      reset(values);
       toast.success("Draft saved");
       navigate("/dashboard");
     } catch (error) {
@@ -208,6 +212,7 @@ export const TestFormPage = () => {
   const next = handleSubmit(async (values) => {
     try {
       const id = await persist(values, existing?.rawStatus ?? "draft");
+      reset(values);
       toast.success("Test details saved");
       navigate(`/tests/${id}/questions`);
     } catch (error) {
@@ -215,40 +220,66 @@ export const TestFormPage = () => {
     }
   });
 
-  if (testId && !isLoading && loadError && !existing) return <Navigate to="/dashboard" replace />;
+  if (isLoading) return <div className="mx-auto grid w-full min-w-0 max-w-[1160px] gap-5"><p className="m-0 text-base text-[#666]">Test Creation / Create Test</p><FormSkeleton rows={8} /></div>;
+  if (testId && !isLoading && loadError && !existing) {
+    return (
+      <div className="mx-auto grid w-full min-w-0 max-w-[1160px] gap-5">
+        <p className="m-0 text-base text-[#666]">Test Creation / Create Test</p>
+        <EmptyState
+          title="Form data unavailable"
+          description={loadError}
+          action={<Button size="sm" onClick={() => setReloadKey((value) => value + 1)}>Retry</Button>}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="page">
-      <p className="breadcrumb">Test Creation / Create Test / {selectedType}</p>
-      {isLoading ? <Loader label="Loading form data" /> : null}
-      {loadError && !isLoading ? <EmptyState title="Form data unavailable" description={loadError} /> : null}
-      <form className="test-form" onSubmit={next}>
-        <div className="segmented">
+    <div className="mx-auto grid w-full min-w-0 max-w-[1160px] gap-5">
+      <p className="m-0 text-base text-[#666]">Test Creation / Create Test / {selectedType}</p>
+      {loadError && !isLoading ? (
+        <EmptyState
+          title="Some form data could not load"
+          description={loadError}
+          action={<Button size="sm" onClick={() => setReloadKey((value) => value + 1)}>Retry</Button>}
+        />
+      ) : null}
+      <form className="grid gap-7" onSubmit={next}>
+        <div className="flex w-fit gap-0 rounded-[7px] border border-brand-line p-1">
           {testTypes.map((type) => (
-            <label key={type} className={selectedType === type ? "active" : ""}>
-              <input type="radio" value={type} {...register("type")} />
+            <label
+              key={type}
+              className={`min-h-9 cursor-pointer rounded-[7px] border-0 bg-transparent px-5 py-2 text-sm font-medium text-[#9aa3b2] transition-colors duration-200 ${selectedType === type ? "bg-brand-secondary font-semibold text-brand-blue" : ""}`}
+            >
+              <input className="hidden" type="radio" value={type} {...register("type")} />
               {type}
             </label>
           ))}
         </div>
-        <div className="form-grid">
+        <div className="grid grid-cols-1 gap-x-12 gap-y-7 md:grid-cols-2">
           <Select label="Subject" options={subjectOptions} error={errors.subject?.message} {...register("subject")} />
           <Input label="Name of Test" placeholder="Enter name of Test" error={errors.name?.message} {...register("name")} />
           <Controller
             name="topics"
             control={control}
             render={({ field }) => (
-              <MultiSelect label="Topic" value={field.value} onChange={field.onChange} options={topicOptions} error={errors.topics?.message} />
+              <Select
+                label="Topic"
+                value={field.value[0] ?? ""}
+                onChange={(event) => field.onChange(event.target.value ? [event.target.value] : [])}
+                options={topicOptions}
+                error={errors.topics?.message}
+              />
             )}
           />
           <Controller
             name="subTopics"
             control={control}
             render={({ field }) => (
-              <MultiSelect
+              <Select
                 label="Sub Topic"
-                value={field.value}
-                onChange={field.onChange}
+                value={field.value[0] ?? ""}
+                onChange={(event) => field.onChange(event.target.value ? [event.target.value] : [])}
                 options={subTopicOptions}
                 error={errors.subTopics?.message}
               />
@@ -261,11 +292,11 @@ export const TestFormPage = () => {
             error={errors.totalTime?.message}
             {...register("totalTime")}
           />
-          <Card className="difficulty-card">
+          <Card className="grid content-start gap-7 border-0 p-0">
             <span>Test Difficulty Level</span>
-            <div className="radio-row">
+            <div className="flex justify-between gap-5">
               {difficulties.map((difficulty) => (
-                <label key={difficulty}>
+                <label className="flex items-center gap-3" key={difficulty}>
                   <input type="radio" value={difficulty} {...register("difficulty")} />
                   {difficulty}
                 </label>
@@ -273,23 +304,23 @@ export const TestFormPage = () => {
             </div>
           </Card>
         </div>
-        <h2 className="section-title">Marking Scheme:</h2>
-        <div className="marking-grid">
-          <div className="field">
+        <h2 className="m-0 text-[17px] font-bold">Marking Scheme:</h2>
+        <div className="grid grid-cols-1 gap-7 min-[981px]:grid-cols-5 min-[721px]:grid-cols-2">
+          <div className="relative grid gap-3 font-medium text-brand-ink">
             <span>Wrong Answer</span>
             <Controller name="wrongMarks" control={control} render={({ field }) => (
               <SpinnerInput value={Number(field.value)} onChange={field.onChange} max={0} />
             )} />
             <FormError message={errors.wrongMarks?.message} />
           </div>
-          <div className="field">
+          <div className="relative grid gap-3 font-medium text-brand-ink">
             <span>Unattempted</span>
             <Controller name="unattemptMarks" control={control} render={({ field }) => (
               <SpinnerInput value={Number(field.value)} onChange={field.onChange} />
             )} />
             <FormError message={errors.unattemptMarks?.message} />
           </div>
-          <div className="field">
+          <div className="relative grid gap-3 font-medium text-brand-ink">
             <span>Correct Answer</span>
             <Controller name="correctMarks" control={control} render={({ field }) => (
               <SpinnerInput value={Number(field.value)} onChange={field.onChange} min={0} />
@@ -297,17 +328,17 @@ export const TestFormPage = () => {
             <FormError message={errors.correctMarks?.message} />
           </div>
           <Input label="No of Questions" type="number" placeholder="Ex:250 Marks" error={errors.totalQuestions?.message} {...register("totalQuestions")} />
-          <div className="field">
+          <div className="relative grid gap-3 font-medium text-brand-ink">
             <span className="text-[#9aa3b2]">Total Marks</span>
             <Input label="" placeholder="Ex:250 Marks" type="number" error={errors.totalMarks?.message} {...register("totalMarks")} />
           </div>
         </div>
-        <div className="form-actions">
+        <div className="mt-2.5 flex items-center justify-end gap-5 max-[720px]:flex-col max-[720px]:items-stretch">
           <Button variant="secondary" size="lg" type="button" onClick={saveDraft} isLoading={isSubmitting}>
-            Save as Draft
+            Cancel
           </Button>
           <Button size="lg" type="submit" isLoading={isSubmitting}>
-            Next: Add Questions
+            Next
           </Button>
         </div>
       </form>

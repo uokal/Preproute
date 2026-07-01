@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Edit2, Eye, Plus, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../api/client";
 import { testsService } from "../services/tests.service";
 import { Test } from "../types";
-import { Button, Card, DataTable, EmptyState, IconButton, IconLink, Loader, Modal, Pagination, SearchBox } from "../ui/components";
+import { Button, Card, DataTable, EmptyState, IconButton, IconLink, Modal, Pagination, SearchBox, StatsCard, StatsSkeleton, TableSkeleton } from "../ui/components";
 
 const PAGE_SIZE = 10;
 
@@ -18,7 +18,7 @@ export const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadTests = async () => {
+  const loadTests = useCallback(async () => {
     setIsLoading(true);
     setError("");
     try {
@@ -30,9 +30,16 @@ export const DashboardPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { void loadTests(); }, []);
+  useEffect(() => { void loadTests(); }, [loadTests]);
+
+  const stats = useMemo(() => ({
+    total: tests.length,
+    draft: tests.filter((test) => test.status === "Draft").length,
+    published: tests.filter((test) => test.status === "Published").length,
+    questions: tests.reduce((sum, test) => sum + Number(test.totalQuestions || 0), 0)
+  }), [tests]);
 
   const filtered = useMemo(() => {
     const needle = query.toLowerCase();
@@ -51,37 +58,50 @@ export const DashboardPage = () => {
 
   const remove = async () => {
     if (!deleteId) return;
+    const previousTests = tests;
+    const testToDelete = tests.find((test) => test.id === deleteId);
+    setTests((current) => current.filter((test) => test.id !== deleteId));
+    setDeleteId(null);
     try {
       await testsService.remove(deleteId);
-      setTests((current) => current.filter((test) => test.id !== deleteId));
-      setDeleteId(null);
-      toast.success("Test deleted");
+      toast.success(`${testToDelete?.name ?? "Test"} deleted`);
     } catch (deleteError) {
+      setTests(previousTests);
       toast.error(getApiErrorMessage(deleteError, "Unable to delete test."));
     }
   };
 
   return (
-    <div className="page">
-      <div className="page-head">
+    <div className="mx-auto grid w-full min-w-0 max-w-[1160px] gap-5">
+      <div className="flex items-center justify-between gap-4 max-[720px]:flex-col max-[720px]:items-stretch">
         <div>
-          <p className="breadcrumb">Test Creation / Dashboard</p>
-          <h1>Test List</h1>
+          <p className="m-0 text-base text-[#666]">Test Creation / Dashboard</p>
+          <h1 className="mb-0 mt-2 text-2xl font-bold">Test List</h1>
         </div>
         <Button size="lg" onClick={() => navigate("/tests/new")}>
           <Plus size={17} />
           Create New Test
         </Button>
       </div>
+      {isLoading ? (
+        <StatsSkeleton />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Dashboard statistics">
+          <StatsCard label="Total Tests" value={stats.total} tone="blue" />
+          <StatsCard label="Draft Tests" value={stats.draft} tone="amber" />
+          <StatsCard label="Published Tests" value={stats.published} tone="green" />
+          <StatsCard label="Total Questions" value={stats.questions} tone="slate" />
+        </div>
+      )}
       <Card>
-        <div className="toolbar">
+        <div className="mb-4 flex justify-between gap-4 max-[720px]:flex-col max-[720px]:items-stretch">
           <SearchBox value={query} onChange={handleSearch} />
-          <span className="muted">{filtered.length} tests</span>
+          <span className="text-brand-muted">{filtered.length} tests</span>
         </div>
         {isLoading ? (
-          <Loader label="Loading tests" />
+          <TableSkeleton rows={7} columns={6} />
         ) : error ? (
-          <EmptyState title="Could not load tests" description={error} action={<Button size="sm" onClick={loadTests}>Try again</Button>} />
+          <EmptyState title="Could not load tests" description={error} action={<Button size="sm" onClick={loadTests}>Retry</Button>} />
         ) : filtered.length ? (
           <>
             <DataTable
@@ -90,9 +110,21 @@ export const DashboardPage = () => {
                 <strong>{test.name}</strong>,
                 test.subject,
                 <span>{test.topics.join(", ") || "No topics"}</span>,
-                <span className={`status status-${test.status.toLowerCase()}`}>{test.displayStatus ?? test.status}</span>,
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                    test.status === "Draft"
+                      ? "bg-[#fff6df] text-[#935f00]"
+                      : test.status === "Published"
+                        ? "bg-[#f0edff] text-[#5b42b8]"
+                        : test.status === "Ready"
+                          ? "bg-[#eafaf4] text-[#087b52]"
+                          : "bg-[#eff3ff] text-[#164ac0]"
+                  }`}
+                >
+                  {test.displayStatus ?? test.status}
+                </span>,
                 test.createdAt,
-                <div className="row-actions">
+                <div className="inline-flex items-center gap-2">
                   <IconLink to={`/tests/${test.id}/preview`} label={`View ${test.name}`}>
                     <Eye size={16} />
                   </IconLink>
@@ -116,8 +148,8 @@ export const DashboardPage = () => {
         )}
       </Card>
       <Modal title="Delete test" open={Boolean(deleteId)} onClose={() => setDeleteId(null)}>
-        <p className="muted">This test and its questions will be removed from this workspace.</p>
-        <div className="modal-actions">
+        <p className="text-brand-muted">This test and its questions will be removed from this workspace.</p>
+        <div className="mt-6 flex items-center justify-end gap-3.5">
           <Button variant="secondary" size="lg" onClick={() => setDeleteId(null)}>
             Cancel
           </Button>

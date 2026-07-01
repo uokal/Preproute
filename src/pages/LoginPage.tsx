@@ -38,16 +38,16 @@ export const LoginPage = () => {
   };
 
   return (
-    <main className="login-page">
-      <section className="login-art" aria-hidden="true">
-        <img src="/assets/login-illustration.png" alt="" />
+    <main className="grid min-h-screen min-w-80 overflow-x-hidden bg-[#f4f9ff] font-sans text-brand-ink grid-cols-[1fr_minmax(520px,710px)] max-[980px]:grid-cols-1">
+      <section className="grid place-items-center p-9 max-[980px]:hidden" aria-hidden="true">
+        <img className="h-auto w-[min(470px,74%)]" src="/assets/login-illustration.png" alt="" />
       </section>
-      <section className="login-panel">
-        <form className="login-form" onSubmit={handleSubmit(onSubmit)}>
-          <Logo />
-          <h1>Login</h1>
-          <p>Use your company provided Login credentials</p>
-          {serverError ? <div className="error-banner">{serverError}</div> : null}
+      <section className="my-[18px] ml-0 mr-5 grid place-items-center rounded-[7px] border border-[#8bb0ff] bg-white max-[980px]:m-4 max-[980px]:min-h-[calc(100vh-32px)]">
+        <form className="grid w-[min(510px,calc(100%_-_54px))] gap-5 max-[720px]:w-[calc(100%_-_32px)]" onSubmit={handleSubmit(onSubmit)}>
+          <Logo className="w-[137px]" />
+          <h1 className="mb-0 mt-4 text-[22px] font-bold">Login</h1>
+          <p className="-mt-2 mb-3 text-[13px]">Use your company provided Login credentials</p>
+          {serverError ? <div className="rounded-[7px] bg-[#fff0f2] px-3.5 py-3 font-semibold text-[#bb2735]">{serverError}</div> : null}
           <Input label="User ID" placeholder="Enter User ID" error={errors.userId?.message} {...register("userId")} />
           <Input
             label="Password"
@@ -56,7 +56,7 @@ export const LoginPage = () => {
             error={errors.password?.message}
             {...register("password")}
           />
-          <a href="#forgot" className="forgot-link">
+          <a href="#forgot" className="text-sm text-[#0b55ff] no-underline">
             Forgot password?
           </a>
           <FormError message={errors.root?.message} />

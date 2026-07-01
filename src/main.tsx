@@ -1,27 +1,39 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { Toaster } from "react-hot-toast";
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 import { AppShell } from "./ui/AppShell";
-import { LoginPage } from "./pages/LoginPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { TestFormPage } from "./pages/TestFormPage";
-import { QuestionsPage } from "./pages/QuestionsPage";
-import { PreviewPublishPage } from "./pages/PreviewPublishPage";
+import { DetailSkeleton } from "./ui/components";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { authStorage } from "./api/authStorage";
 import "./styles.css";
+
+const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })));
+const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
+const TestFormPage = lazy(() => import("./pages/TestFormPage").then((module) => ({ default: module.TestFormPage })));
+const QuestionsPage = lazy(() => import("./pages/QuestionsPage").then((module) => ({ default: module.QuestionsPage })));
+const PreviewPublishPage = lazy(() => import("./pages/PreviewPublishPage").then((module) => ({ default: module.PreviewPublishPage })));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })));
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return authStorage.getToken() ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+const RouteView = ({ children }: { children: React.ReactNode }) => (
+  <ErrorBoundary>
+    <Suspense fallback={<div className="mx-auto grid w-full min-w-0 max-w-[1160px] gap-5"><DetailSkeleton /></div>}>{children}</Suspense>
+  </ErrorBoundary>
+);
+
 const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
+  { path: "/login", element: <RouteView><LoginPage /></RouteView> },
   {
     path: "/",
     element: (
       <ProtectedRoute>
-        <AppShell />
+        <RouteView>
+          <AppShell />
+        </RouteView>
       </ProtectedRoute>
     ),
     children: [
@@ -33,7 +45,7 @@ const router = createBrowserRouter([
       { path: "tests/:testId/preview", element: <PreviewPublishPage /> }
     ]
   },
-  // { path: "*", element: <Navigate to="/" replace /> }
+  { path: "*", element: <RouteView><NotFoundPage /></RouteView> }
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -51,7 +63,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           iconTheme: { primary: "#18a56f", secondary: "#fff" }
         },
         error: {
-          iconTheme: { primary: "#ff7178", secondary: "#fff" }
+          iconTheme: { primary: "#FF7F7F", secondary: "#fff" }
         }
       }}
     />
