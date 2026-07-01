@@ -492,15 +492,6 @@ export const QuestionsPage = () => {
           {errors.explanation ? <small className="text-xs font-semibold text-[#e44855]">{errors.explanation.message}</small> : null}
         </label>
 
-        <div className="flex items-center justify-center gap-48 py-5 text-[#c8ced8]">
-          <button type="button" className="transition-colors duration-200 hover:text-brand-secondaryText" aria-label="Previous question">
-            <ChevronLeft size={18} />
-          </button>
-          <button type="button" className="transition-colors duration-200 hover:text-brand-secondaryText" aria-label="Next question">
-            <ChevronRight size={18} />
-          </button>
-        </div>
-
         <h2 className="m-0 text-base font-semibold text-brand-ink">Question settings</h2>
         <div className="grid grid-cols-1 gap-y-6">
           <Select label="Level of Difficulty" options={["Easy", "Medium", "Difficult"]} error={errors.difficulty?.message} {...register("difficulty")} />
