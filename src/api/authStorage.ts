@@ -1,12 +1,11 @@
+const TOKEN_KEY = "preproute_token";
 const USER_KEY = "preproute_user";
 
-let _token: string | null = null;
-
 export const authStorage = {
-  getToken: () => _token,
-  setToken: (token: string) => { _token = token; },
+  getToken: () => sessionStorage.getItem(TOKEN_KEY),
+  setToken: (token: string) => sessionStorage.setItem(TOKEN_KEY, token),
   clear: () => {
-    _token = null;
+    sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(USER_KEY);
   },
   setUser: (user: unknown) => sessionStorage.setItem(USER_KEY, JSON.stringify(user)),
