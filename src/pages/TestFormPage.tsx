@@ -120,7 +120,6 @@ export const TestFormPage = () => {
           isHydratingEdit.current = true;
           reset({ ...toValues(mapped), subject: subject?.id ?? "", topics: selectedTopicIds, subTopics: selectedSubTopicIds });
           railSet({ visible: true, totalQuestions: mapped.totalQuestions, doneCount: mapped.questionIds?.length ?? 0 });
-          window.setTimeout(() => { isHydratingEdit.current = false; }, 0);
         }
       } catch (error) {
         const message = getApiErrorMessage(error, "Unable to load test form data.");
@@ -141,10 +140,11 @@ export const TestFormPage = () => {
       return;
     }
     const loadTopics = async () => {
+      const isHydrating = isHydratingEdit.current;
       try {
         const topicList = await topicsService.bySubject(selectedSubject);
         setTopics(topicList);
-        if (!isHydratingEdit.current) {
+        if (!isHydrating) {
           setValue("topics", []);
           setValue("subTopics", []);
         }
@@ -157,14 +157,19 @@ export const TestFormPage = () => {
 
   useEffect(() => {
     const loadSubTopics = async () => {
+      const isHydrating = isHydratingEdit.current;
       try {
         const subTopicList = await topicsService.subTopicsByTopics(selectedTopics);
         setSubTopics(subTopicList);
-        if (!isHydratingEdit.current) {
+        if (!isHydrating) {
           setValue("subTopics", []);
         }
       } catch (error) {
         toast.error(getApiErrorMessage(error, "Unable to load sub-topics."));
+      } finally {
+        if (isHydrating) {
+          isHydratingEdit.current = false;
+        }
       }
     };
     void loadSubTopics();
