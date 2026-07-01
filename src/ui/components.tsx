@@ -350,10 +350,24 @@ export const DateInput = ({
 }) => {
   const ref = useRef<HTMLInputElement>(null);
   return (
-    <div className="relative flex min-h-12 w-full cursor-pointer items-center rounded-[7px] border border-[#cbd2dc] bg-white px-4" onClick={() => ref.current?.showPicker?.()}>
-      <input ref={ref} type="date" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label={placeholder} value={value ?? ""} onChange={(e) => onChange?.(e.target.value)} />
-      {!value && <span className="flex-1 text-sm text-[#c8ced8]">{placeholder}</span>}
+    <div
+      className="relative flex min-h-12 w-full cursor-pointer items-center rounded-[7px] border border-[#cbd2dc] bg-white px-4"
+      onClick={() => ref.current?.showPicker?.()}
+    >
+      <span className={`flex-1 text-sm ${value ? "text-brand-ink" : "text-[#c8ced8]"}`}>
+        {value
+          ? (() => { const d = new Date(value + "T00:00:00"); return isNaN(d.getTime()) ? value : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }); })()
+          : placeholder}
+      </span>
       <Calendar size={18} className="flex-shrink-0 text-[#c8ced8]" />
+      <input
+        ref={ref}
+        type="date"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        aria-label={placeholder}
+        value={value ?? ""}
+        onChange={(e) => onChange?.(e.target.value)}
+      />
     </div>
   );
 };
@@ -370,12 +384,15 @@ export const TimeSelect = ({
   options?: string[];
 }) => (
   <div className="relative flex min-h-12 w-full items-center rounded-[7px] border border-[#cbd2dc] bg-white">
-    <select className="h-full min-h-12 w-full cursor-pointer appearance-none border-0 bg-transparent px-4 pr-10 text-[#c8ced8] outline-none" value={value ?? ""} aria-label={placeholder} onChange={(e) => onChange?.(e.target.value)}>
+    <select
+      className={`h-full min-h-12 w-full cursor-pointer appearance-none border-0 bg-transparent px-4 pr-10 outline-none ${value ? "text-brand-ink" : "text-[#c8ced8]"}`}
+      value={value ?? ""}
+      aria-label={placeholder}
+      onChange={(e) => onChange?.(e.target.value)}
+    >
       <option value="">{placeholder}</option>
       {options.map((o) => (
-        <option key={o} value={o}>
-          {o}
-        </option>
+        <option key={o} value={o}>{o}</option>
       ))}
     </select>
     <ChevronDown size={18} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#c8ced8]" />
@@ -419,9 +436,10 @@ export const RadioOption = ({
   onChange: () => void;
   label: string;
 }) => (
-  <label className="flex cursor-pointer items-center gap-3 text-[15px] text-brand-ink">
-    <span className={cn("flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-[#c8ced8]", checked && "border-brand-primary")}>{checked && <span className="h-2.5 w-2.5 rounded-full bg-brand-primary" />}</span>
-    <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="sr-only" />
+  <label className="flex cursor-pointer items-center gap-3 text-[15px] text-brand-ink" onClick={onChange}>
+    <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200 ${checked ? "border-brand-primary" : "border-[#c8ced8]"}`}>
+      {checked && <span className="h-2.5 w-2.5 rounded-full bg-brand-primary" />}
+    </span>
     {label}
   </label>
 );
@@ -472,28 +490,43 @@ export const Pagination = ({
 }) => {
   const totalPages = Math.ceil(total / pageSize);
   if (totalPages <= 1) return null;
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  const pages: Array<number | "..."> = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (page > 3) pages.push("...");
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
+    if (page < totalPages - 2) pages.push("...");
+    pages.push(totalPages);
+  }
+
   return (
     <div className="max-w-full overflow-x-auto overscroll-x-contain pt-4">
       <div className="flex w-max min-w-full items-center justify-start gap-1 md:justify-end">
         <button type="button" aria-label="Previous page" onClick={() => onChange(page - 1)} disabled={page === 1} className="flex h-9 w-9 items-center justify-center rounded-[7px] border border-[#dfe4ee] bg-white text-sm text-brand-ink transition-colors duration-200 hover:bg-brand-secondary disabled:cursor-not-allowed disabled:opacity-40">
           ‹
         </button>
-        {pages.map((p) => (
-          <button
-            key={p}
-            type="button"
-            aria-label={`Page ${p}`}
-            aria-current={p === page ? "page" : undefined}
-            onClick={() => onChange(p)}
-            className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-[7px] border text-sm font-medium transition",
-              p === page ? "border-brand-primary bg-brand-primary text-white hover:bg-brand-primary/90" : "border-[#dfe4ee] bg-white text-brand-ink hover:bg-brand-secondary"
-            )}
-          >
-            {p}
-          </button>
-        ))}
+        {pages.map((p, i) =>
+          p === "..." ? (
+            <span key={`ellipsis-${i}`} className="flex h-9 w-9 items-center justify-center text-sm text-brand-muted">…</span>
+          ) : (
+            <button
+              key={p}
+              type="button"
+              aria-label={`Page ${p}`}
+              aria-current={p === page ? "page" : undefined}
+              onClick={() => onChange(p)}
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-[7px] border text-sm font-medium transition",
+                p === page ? "border-brand-primary bg-brand-primary text-white hover:bg-brand-primary/90" : "border-[#dfe4ee] bg-white text-brand-ink hover:bg-brand-secondary"
+              )}
+            >
+              {p}
+            </button>
+          )
+        )}
         <button type="button" aria-label="Next page" onClick={() => onChange(page + 1)} disabled={page === totalPages} className="flex h-9 w-9 items-center justify-center rounded-[7px] border border-[#dfe4ee] bg-white text-sm text-brand-ink transition-colors duration-200 hover:bg-brand-secondary disabled:cursor-not-allowed disabled:opacity-40">
           ›
         </button>

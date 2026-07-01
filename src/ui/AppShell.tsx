@@ -38,7 +38,7 @@ const MainNav = () => (
       <ClipboardPenLine size={18} />
       <span>Test Creation</span>
     </NavLink>
-    <NavLink to="/dashboard" end={false} className={navLinkClass}>
+    <NavLink to="/tracking" className={navLinkClass}>
       <FileClock size={18} />
       <span>Test Tracking</span>
     </NavLink>
