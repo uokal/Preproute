@@ -1,16 +1,17 @@
-const TOKEN_KEY = "preproute_token";
 const USER_KEY = "preproute_user";
 
+let _token: string | null = null;
+
 export const authStorage = {
-  getToken: () => localStorage.getItem(TOKEN_KEY),
-  setToken: (token: string) => localStorage.setItem(TOKEN_KEY, token),
+  getToken: () => _token,
+  setToken: (token: string) => { _token = token; },
   clear: () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    _token = null;
+    sessionStorage.removeItem(USER_KEY);
   },
-  setUser: (user: unknown) => localStorage.setItem(USER_KEY, JSON.stringify(user)),
+  setUser: (user: unknown) => sessionStorage.setItem(USER_KEY, JSON.stringify(user)),
   getUser: <T,>() => {
-    const value = localStorage.getItem(USER_KEY);
+    const value = sessionStorage.getItem(USER_KEY);
     if (!value) return null;
     try {
       return JSON.parse(value) as T;

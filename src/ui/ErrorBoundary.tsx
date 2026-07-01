@@ -14,7 +14,12 @@ class ErrorBoundaryInner extends React.Component<React.PropsWithChildren<{ onDas
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("[ErrorBoundary]", error, info.componentStack);
+    const safeMessage = String(error.message).replace(/[\r\n]/g, " ");
+    const safeStack = String(info.componentStack).replace(/[\r\n]/g, " ");
+    console.error("[ErrorBoundary]", safeMessage, safeStack);
+    if (error.message.includes("dynamically imported module") || error.message.includes("Failed to fetch")) {
+      window.location.reload();
+    }
   }
 
   retry = () => {
