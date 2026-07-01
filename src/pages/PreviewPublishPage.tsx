@@ -43,7 +43,7 @@ export const PreviewPublishPage = () => {
         setTest(mapped);
         railSet({ visible: true, totalQuestions: mapped.totalQuestions, doneCount: questions.length });
       } catch (error) {
-        const message = getApiErrorMessage(error, "Unable to load preview.");
+        const message = getApiErrorMessage(error, "Unable to load preview.") ?? "";
         setLoadError(message);
         toast.error(message);
       } finally {

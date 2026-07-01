@@ -24,7 +24,7 @@ export const DashboardPage = () => {
     try {
       setTests(await testsService.list());
     } catch (loadError) {
-      const message = getApiErrorMessage(loadError, "Unable to load tests.");
+      const message = getApiErrorMessage(loadError, "Unable to load tests.") ?? "";
       setError(message);
       toast.error(message);
     } finally {

@@ -122,7 +122,7 @@ export const TestFormPage = () => {
           railSet({ visible: true, totalQuestions: mapped.totalQuestions, doneCount: mapped.questionIds?.length ?? 0 });
         }
       } catch (error) {
-        const message = getApiErrorMessage(error, "Unable to load test form data.");
+        const message = getApiErrorMessage(error, "Unable to load test form data.") ?? "";
         setLoadError(message);
         toast.error(message);
       } finally {

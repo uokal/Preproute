@@ -180,7 +180,7 @@ export const QuestionsPage = () => {
         savedQuestionSignature.current = fetchedQuestions.map((question) => question.id).join("|");
         railSet({ visible: true, totalQuestions: getRailQuestionCount(fetchedQuestions.length), doneCount: fetchedQuestions.length });
       } catch (error) {
-        const message = getApiErrorMessage(error, "Unable to load test questions.");
+        const message = getApiErrorMessage(error, "Unable to load test questions.") ?? "";
         setLoadError(message);
         toast.error(message);
       } finally {

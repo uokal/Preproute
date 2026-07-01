@@ -31,7 +31,7 @@ export const LoginPage = () => {
       toast.success("Welcome back");
       navigate("/dashboard");
     } catch (error) {
-      const message = getApiErrorMessage(error, "We could not verify those credentials. Please try again.");
+      const message = getApiErrorMessage(error, "We could not verify those credentials. Please try again.") ?? "";
       setServerError(message);
       toast.error(message);
     }
