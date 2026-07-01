@@ -119,7 +119,7 @@ export const TestFormPage = () => {
           setExisting(mapped);
           isHydratingEdit.current = true;
           reset({ ...toValues(mapped), subject: subject?.id ?? "", topics: selectedTopicIds, subTopics: selectedSubTopicIds });
-          railSet({ totalQuestions: mapped.totalQuestions, doneCount: mapped.questionIds?.length ?? 0 });
+          railSet({ visible: true, totalQuestions: mapped.totalQuestions, doneCount: mapped.questionIds?.length ?? 0 });
           window.setTimeout(() => { isHydratingEdit.current = false; }, 0);
         }
       } catch (error) {

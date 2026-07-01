@@ -41,7 +41,7 @@ export const PreviewPublishPage = () => {
         const questions = await questionsService.fetchBulk(questionIds);
         const mapped = mapApiTest(apiTest, questions);
         setTest(mapped);
-        railSet({ totalQuestions: mapped.totalQuestions, doneCount: questions.length });
+        railSet({ visible: true, totalQuestions: mapped.totalQuestions, doneCount: questions.length });
       } catch (error) {
         const message = getApiErrorMessage(error, "Unable to load preview.");
         setLoadError(message);

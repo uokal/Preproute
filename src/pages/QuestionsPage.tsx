@@ -211,7 +211,7 @@ export const QuestionsPage = () => {
   const refreshCount = (nextQuestions: Question[]) => {
     setQuestions(nextQuestions);
     setTest((current) => (current ? { ...current, questions: nextQuestions } : current));
-    railSet({ totalQuestions: getRailQuestionCount(nextQuestions.length), doneCount: nextQuestions.length });
+    railSet({ visible: true, totalQuestions: getRailQuestionCount(nextQuestions.length), doneCount: nextQuestions.length });
   };
 
   const submitQuestion = handleSubmit(async (values) => {

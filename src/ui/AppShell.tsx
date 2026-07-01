@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useMatch, useNavigate } from "react-router-dom";
-import { Logo, NotificationButton, QuestionRailButton, UserAvatar } from "./components";
+import { Logo, NotificationButton, QuestionRailButton, SkeletonBlock, UserAvatar } from "./components";
 import { useRailStore } from "../store/railStore";
 import { authStorage } from "../api/authStorage";
 
@@ -46,7 +46,7 @@ const MainNav = () => (
 );
 
 export const AppShell = () => {
-  const { totalQuestions, doneCount, questions: railQuestions } = useRailStore();
+  const { visible: railVisible, doneCount, questions: railQuestions } = useRailStore();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -138,9 +138,17 @@ export const AppShell = () => {
                     : "overflow-hidden pb-0"
                 }`}
               >
-                {railQuestions.map((q, i) => (
-                  <QuestionRailButton key={q.id} index={i} done={q.status === "completed"} current={q.status === "current"} />
-                ))}
+                {!railVisible
+                  ? Array.from({ length: 6 }, (_, i) => (
+                      <div key={i} className="flex h-9 w-full items-center gap-2 rounded-[7px] border border-[#ebedf2] px-3">
+                        <SkeletonBlock className="h-5 w-5 rounded-full flex-shrink-0" />
+                        <SkeletonBlock className="h-3 w-24" />
+                      </div>
+                    ))
+                  : railQuestions.map((q, i) => (
+                      <QuestionRailButton key={q.id} index={i} done={q.status === "completed"} current={q.status === "current"} />
+                    ))
+                }
               </div>
             </div>
 
